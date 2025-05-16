@@ -1,4 +1,8 @@
 import React, { useState, useEffect } from "react";
+import { supabase } from "./supabase";
+import History from "./History";
+
+
 
 function App() {
   const [translatedText, setTranslatedText] = useState("");
@@ -7,6 +11,8 @@ function App() {
   const [darkMode, setDarkMode] = useState(true);
   const [fileName, setFileName] = useState("");
   const [typedOutput, setTypedOutput] = useState("");
+  const [showHistory, setShowHistory] = useState(false);
+
 
   const fakeSimplifiedText =
     "Simplified and AI-enhanced version of the document.";
@@ -18,11 +24,27 @@ function App() {
     setLoading(true);
     setFileName(file.name);
 
-    setTimeout(() => {
-      setOriginalText("Uploaded file content preview...\n\nThis would be the extracted text from the file.");
-      setTranslatedText(fakeSimplifiedText);
+    setTimeout(async () => {
+      const original = "Uploaded file content preview...\n\nThis would be the extracted text from the file.";
+      const simplified = fakeSimplifiedText;
+
+      setOriginalText(original);
+      setTranslatedText(simplified);
       setLoading(false);
+
+      // insert supabase
+      const { error } = await supabase.from("documents").insert({
+        original_text: original,
+        simplified_text: simplified,
+      });
+
+      if (error) {
+        console.error("Error inserting into Supabase:", error.message);
+      } else {
+        console.log("Document saved to Supabase!");
+      }
     }, 2000);
+
   };
 
   const downloadText = () => {
@@ -198,39 +220,48 @@ function App() {
         <button onClick={() => setDarkMode(!darkMode)} style={styles.toggleBtn}>
           {darkMode ? "🌞 Light Mode" : "🌙 Dark Mode"}
         </button>
+        <button onClick={() => setShowHistory(!showHistory)} style={{...styles.toggleBtn, marginLeft: "12px" }}>
+          {showHistory ? "📤 Back to Upload" : "📜 History"}
+        </button>
       </div>
 
-      <div style={styles.header}>
-        <h1 style={styles.heading}>Simplify Complex Documents using AI</h1>
-        <p style={styles.tagline}>AI-powered clarity, right at your fingertips.</p>
-      </div>
+      {showHistory ? (
+        <History />
+      ) : (
+        <> 
+        
+          <div style={styles.header}>
+            <h1 style={styles.heading}>Simplify Complex Documents using AI</h1>
+            <p style={styles.tagline}>AI-powered clarity, right at your fingertips.</p>
+          </div>
 
-      <div style={styles.uploadBox}>
-        <label style={styles.uploadLabel}>Upload a PDF or image:</label>
-        <label style={styles.uploadButton}>
-          Choose File
-          <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={handleUpload} style={styles.uploadInput} />
-        </label>
-        {fileName && <p style={{ marginTop: "12px", fontSize: "14px" }}>Uploaded: {fileName}</p>}
-        {loading && <div style={styles.loadingSpinner}></div>}
-        {!loading && translatedText && (
-          <button onClick={downloadText} style={styles.downloadButton}>Download Simplified Text</button>
-        )}
-      </div>
+          <div style={styles.uploadBox}>
+            <label style={styles.uploadLabel}>Upload a PDF or image:</label>
+            <label style={styles.uploadButton}>
+              Choose File
+              <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={handleUpload} style={styles.uploadInput} />
+            </label>
+            {fileName && <p style={{ marginTop: "12px", fontSize: "14px" }}>Uploaded: {fileName}</p>}
+            {loading && <div style={styles.loadingSpinner}></div>}
+            {!loading && translatedText && (
+              <button onClick={downloadText} style={styles.downloadButton}>Download Simplified Text</button>
+            )}
+          </div>
 
-      <div style={styles.splitView}>
-        <div style={styles.card}>
-          <h3 style={{ color: "#60a5fa", marginBottom: "10px" }}>Original</h3>
-          <p>{originalText}</p>
-        </div>
-        <div style={styles.card}>
-          <h3 style={{ color: "#34d399", marginBottom: "10px" }}>Simplified</h3>
-          <p>{typedOutput ? renderWithHighlight(typedOutput) : ""}</p>
-        </div>
-      </div>
+          <div style={styles.splitView}>
+            <div style={styles.card}>
+              <h3 style={{ color: "#60a5fa", marginBottom: "10px" }}>Original</h3>
+              <p>{originalText}</p>
+            </div>
+            <div style={styles.card}>
+              <h3 style={{ color: "#34d399", marginBottom: "10px" }}>Simplified</h3>
+              <p>{typedOutput ? renderWithHighlight(typedOutput) : ""}</p>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
 
 export default App;
-
